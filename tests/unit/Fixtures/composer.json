@@ -1,0 +1,22 @@
+{
+	"name": "gilbertsoft/typo3-config-handling-test",
+	"description": "TYPO3 Config Handling Extension for testing.",
+	"license": "GPL-3.0-or-later",
+	"type": "typo3-config-handling-extension",
+	"require": {
+		"gilbertsoft/typo3-config-handling-extensions": "^0.1.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Gilbertsoft\\TYPO3\\ConfigHandling\\Extension\\Test\\": "src"
+		}
+	},
+	"extra": {
+		"gilbertsoft/typo3-config-handling-extension": {
+			"class": "Gilbertsoft\\TYPO3\\ConfigHandling\\Extension\\DDEV\\ImageMagick\\ConfigProvider",
+			"after": [
+				"gilbertsoft/typo3-config-handling-ddev"
+			]
+		}
+	}
+}

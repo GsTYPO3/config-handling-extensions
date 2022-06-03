@@ -1,0 +1,2 @@
+imports:
+  - { resource: \Gilbertsoft\TYPO3\ConfigHandling\Extensions, type: class }

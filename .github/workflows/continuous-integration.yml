@@ -1,0 +1,612 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches:
+      - 'main'
+      - '[0-9]+.*'
+    paths-ignore:
+      - '.ddev/**'
+      - '.github/ISSUE_TEMPLATE/*'
+      - '.github/FUNDING.yml'
+      - '.vscode/*'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '.ddev/**'
+      - '.github/ISSUE_TEMPLATE/*'
+      - '.github/FUNDING.yml'
+      - '.vscode/*'
+      - '**.md'
+  schedule:
+    - cron: '44 4 * * *'
+
+env:
+  COMPOSER_ROOT_VERSION: 0.1.0
+  COMPOSER_FLAGS: --ansi --no-interaction --no-progress
+  COMPOSER_INSTALL_FLAGS: --prefer-dist
+  COMPOSER_UPDATE_FLAGS: ''
+
+jobs:
+  validation:
+    name: Composer validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Validate composer.json
+        run: composer ci:composer:validate
+
+      - name: Normalize composer.json
+        run: composer ci:composer:normalize
+
+      - name: Check dependencies
+        run: composer ci:composer:require-checker
+
+  yaml_lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Lint YAML files
+        run: composer ci:yaml:lint
+
+  php_lint:
+    name: PHP Lint
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - '7.4'
+          - 'latest'
+        experimental:
+          - false
+        include:
+          - php-version: 'nightly'
+            experimental: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: ${{ matrix.php-version }}
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ matrix.php-version }}-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-stable-
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-
+            ${{ runner.os }}-composer-
+
+      - name: Set platform.php for nightly
+        if: ${{ matrix.php-version == 'nightly' }}
+        run: |
+          composer install --no-scripts ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+          composer bin phpunit config platform.php 8.1.99
+
+      - name: Install dependencies
+        run: composer update ${{ env.COMPOSER_UPDATE_FLAGS }} ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Lint PHP files
+        run: composer ci:php:lint
+
+  php_rector:
+    name: PHP Rector
+    needs:
+      - php_lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Validation of Rector rules for PHP files
+        run: composer ci:php:rector
+
+  php_coding_standards:
+    name: PHP Coding Standards
+    needs:
+      - php_rector
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Validation of coding standards for PHP files
+        run: composer ci:php:cs-fixer
+
+  php_sniff:
+    name: PHP Code Sniffer
+    needs:
+      - php_rector
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Validation of coding standards
+        run: composer ci:php:sniff
+
+  php_copypaste_detector:
+    name: PHP Copy/Paste Detector
+    needs:
+      - php_rector
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: latest
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-latest-stable-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-latest-stable-
+            ${{ runner.os }}-composer-latest-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Detection of copy/paste code in PHP files
+        run: composer ci:php:copypaste
+
+  php_stan:
+    name: PHP Stan
+    needs:
+      - validation
+      - php_coding_standards
+      - php_sniff
+      - php_copypaste_detector
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - '7.4'
+          - 'latest'
+        dependencies:
+          - 'lowest'
+          - 'stable'
+          - 'highest'
+        typo3-version:
+          - '^10.4'
+          - '^11.5'
+        experimental:
+          - false
+        include:
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'lowest'
+            typo3-version: '^11.5'
+            experimental: true
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'stable'
+            typo3-version: '^11.5'
+            experimental: true
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'highest'
+            typo3-version: '^11.5'
+            experimental: true
+        exclude:
+          - php-version: 'latest'
+            typo3-version: '^10.4'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1
+          php-version: ${{ matrix.php-version }}
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-${{ matrix.typo3-version }}-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-${{ matrix.typo3-version }}-
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-
+            ${{ runner.os }}-composer-
+
+      - name: Handle TYPO3 version
+        run: echo "COMPOSER_UPDATE_FLAGS=$COMPOSER_UPDATE_FLAGS --with typo3/cms-core=${{ matrix.typo3-version }}" >> $GITHUB_ENV
+
+      - name: Handle lowest dependencies update
+        if: contains(matrix.dependencies, 'lowest')
+        run: echo "COMPOSER_UPDATE_FLAGS=$COMPOSER_UPDATE_FLAGS --prefer-lowest" >> $GITHUB_ENV
+
+      - name: Allow alpha releases for latest-deps builds to catch problems earlier
+        if: contains(matrix.dependencies, 'highest')
+        run: composer config minimum-stability alpha
+
+      - name: Install dependencies
+        run: composer install --no-scripts ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Set platform.php for nightly
+        if: ${{ matrix.php-version == 'nightly' }}
+        run: composer bin phpunit config platform.php 8.1.99
+
+      - name: Update dependencies without deprecation rules
+        run: |
+          composer bin phpstan -- remove --no-update ${{ env.COMPOSER_FLAGS }} phpstan/phpstan-deprecation-rules
+          composer update ${{ env.COMPOSER_UPDATE_FLAGS }} ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Run PHPStan
+        run: composer ci:php:stan
+
+      - name: Update dependencies with deprecation rules
+        run: |
+          composer bin phpstan require --no-update ${{ env.COMPOSER_FLAGS }} phpstan/phpstan-deprecation-rules:*
+          composer update ${{ env.COMPOSER_UPDATE_FLAGS }} ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Run PHPStan with deprecation rules
+        continue-on-error: true
+        run: composer ci:php:stan
+
+  tests:
+    name: Tests
+    needs:
+      - php_stan
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        php-version:
+          - '7.4'
+          - 'latest'
+        dependencies:
+          - 'lowest'
+          - 'stable'
+          - 'highest'
+        typo3-version:
+          - '^10.4'
+          - '^11.5'
+        experimental:
+          - false
+        include:
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'lowest'
+            typo3-version: '^11.5'
+            experimental: true
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'stable'
+            typo3-version: '^11.5'
+            experimental: true
+          - os: ubuntu-latest
+            php-version: 'nightly'
+            dependencies: 'highest'
+            typo3-version: '^11.5'
+            experimental: true
+        exclude:
+          - php-version: 'latest'
+            typo3-version: '^10.4'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: xdebug
+          extensions: intl, zip
+          ini-values: memory_limit=-1, error_reporting=E_ALL, display_errors=On
+          php-version: ${{ matrix.php-version }}
+          tools: composer
+
+      - name: Setup authentication for Composer
+        run: composer config github-oauth.github.com ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Composer Cache Vars
+        id: composer-cache-vars
+        run: |
+          echo "::set-output name=dir::$(composer config cache-files-dir)"
+          echo "::set-output name=timestamp::$(date +"%s")"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache-vars.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-${{ matrix.typo3-version }}-${{ steps.composer-cache-vars.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-${{ matrix.typo3-version }}-
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-${{ matrix.dependencies }}-
+            ${{ runner.os }}-composer-${{ matrix.php-version }}-
+            ${{ runner.os }}-composer-
+
+      - name: Handle TYPO3 version
+        run: echo "COMPOSER_UPDATE_FLAGS=$COMPOSER_UPDATE_FLAGS --with typo3/cms-core=${{ matrix.typo3-version }}" >> $GITHUB_ENV
+
+      - name: Handle lowest dependencies update
+        if: contains(matrix.dependencies, 'lowest')
+        run: echo "COMPOSER_UPDATE_FLAGS=$COMPOSER_UPDATE_FLAGS --prefer-lowest" >> $GITHUB_ENV
+
+      - name: Allow alpha releases for highest-deps builds to catch problems earlier
+        if: contains(matrix.dependencies, 'highest')
+        run: composer config minimum-stability alpha
+
+      - name: Enforce Composer 2.1 for PHP 8
+        if: ${{ matrix.php-version != '7.4' }}
+        run: |
+          composer require ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }} --dev --no-update composer/composer ^2.1
+
+      - name: Set platform.php for nightly
+        if: ${{ matrix.php-version == 'nightly' }}
+        run: |
+          composer install --no-scripts ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+          composer bin phpunit config platform.php 8.1.99
+
+      - name: Install dependencies
+        run: composer update ${{ env.COMPOSER_UPDATE_FLAGS }} ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }}
+
+      - name: Unit Tests
+        run: composer ci:tests:unit
+
+      - name: Functional Tests
+        run: composer ci:tests:functional
+
+      - name: Smoke Tests
+        run: composer ci:tests:smoke
+
+      - name: Upload coverage results to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_FLAG_NAME: php-${{ matrix.php-version }}-${{ matrix.typo3-version }}
+        run: |
+          composer exec phpcov -- merge --clover var/log/clover.xml var/log/cov
+          composer global require ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }} php-coveralls/php-coveralls
+          #composer global exec php-coveralls -- --coverage_clover=var/log/clover.xml -vvv --json_path=var/log/coveralls-upload.json
+
+      - name: Archive Logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: logs
+          path: var/log
+          if-no-files-found: ignore
+          retention-days: 5
+
+#  coveralls-finish:
+#    name: Finish Coveralls
+#    needs:
+#      - tests
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Coveralls Finished
+#        uses: coverallsapp/github-action@master
+#        with:
+#          github-token: ${{ secrets.GITHUB_TOKEN }}
+#          parallel-finished: true

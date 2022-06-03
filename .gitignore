@@ -1,0 +1,14 @@
+# Folders
+/config
+/public
+/var
+/vendor
+
+# Files
+/src/Extensions/ExtensionsTrait.php
+/.php-cs-fixer.cache
+/.php-cs-fixer.php
+/.phplint-cache
+/composer.lock
+/phpstan.neon
+.phpunit.result.cache

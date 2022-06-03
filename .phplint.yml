@@ -1,0 +1,10 @@
+path: .
+jobs: 10
+extensions:
+  - php
+exclude:
+  - config
+  - public
+  - var
+  - vendor
+warning: false
