@@ -33,12 +33,13 @@
 	"require-dev": {
 		"bamarni/composer-bin-plugin": "*",
 		"composer/composer": "^2.0",
+		"composer/semver": "^3.0",
 		"ergebnis/composer-normalize": "*",
 		"gilbertsoft/typo3-config-handling-test": "@dev"
 	},
 	"conflict": {
 		"helhum/typo3-console-plugin": "<2.0.7",
-		"nikic/php-parser": "<4.6.0"
+		"nikic/php-parser": "<4.12.0"
 	},
 	"repositories": {
 		"test-extensions": {
@@ -161,6 +162,9 @@
 		"fix:php:cs": "@php php-cs-fixer fix",
 		"fix:php:rector": "@php rector process --no-diffs",
 		"fix:php:sniff": "@php phpcbf --standard=PSR12 src tests",
+		"set-version": [
+			"Gilbertsoft\\TYPO3\\ConfigHandling\\Composer\\Scripts::setVersion"
+		],
 		"tools": [
 			"@tools:static",
 			"@tools:dynamic"
@@ -172,10 +176,10 @@
 		],
 		"tools:composer:normalize": "@composer normalize --ansi -n --dry-run",
 		"tools:composer:require-checker": [
-			"@composer require --ansi -n composer/composer:^2.0 --no-plugins",
+			"@composer require --ansi -n composer/composer:^2.0 composer/semver:^3.0 --no-plugins",
 			"@php composer-require-checker",
 			"@clean",
-			"@composer require --ansi -n --dev composer/composer:^2.0"
+			"@composer require --ansi -n --dev composer/composer:^2.0 composer/semver:^3.0"
 		],
 		"tools:composer:validate": "@composer validate --ansi -n --strict",
 		"tools:dynamic": [
