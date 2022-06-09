@@ -583,11 +583,11 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_PARALLEL: true
-          COVERALLS_FLAG_NAME: php-${{ matrix.php-version }}-${{ matrix.typo3-version }}
+          COVERALLS_FLAG_NAME: php-${{ matrix.php-version }}-${{ matrix.dependencies }}-${{ matrix.typo3-version }}
         run: |
           composer exec phpcov -- merge --clover var/log/clover.xml var/log/cov
           composer global require ${{ env.COMPOSER_INSTALL_FLAGS }} ${{ env.COMPOSER_FLAGS }} php-coveralls/php-coveralls
-          #composer global exec php-coveralls -- --coverage_clover=var/log/clover.xml -vvv --json_path=var/log/coveralls-upload.json
+          composer global exec php-coveralls -- --coverage_clover=var/log/clover.xml -vvv --json_path=var/log/coveralls-upload.json
 
       - name: Archive Logs
         uses: actions/upload-artifact@v2
@@ -598,15 +598,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 5
 
-#  coveralls-finish:
-#    name: Finish Coveralls
-#    needs:
-#      - tests
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Coveralls Finished
-#        uses: coverallsapp/github-action@master
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          parallel-finished: true
+  coveralls-finish:
+    name: Finish Coveralls
+    needs:
+      - tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
