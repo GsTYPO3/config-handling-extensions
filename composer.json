@@ -1,0 +1,226 @@
+{
+	"name": "gilbertsoft/typo3-config-handling-extensions",
+	"description": "TYPO3 Config Handling Extension support.",
+	"license": "GPL-3.0-or-later",
+	"type": "library",
+	"keywords": [
+		"TYPO3 CMS",
+		"config",
+		"handling",
+		"extensions"
+	],
+	"readme": "README.md",
+	"authors": [
+		{
+			"name": "Simon Gilli",
+			"email": "simon.gilli@gilbertsoft.org",
+			"homepage": "https://gilbertsoft.org",
+			"role": "developer"
+		}
+	],
+	"homepage": "https://github.com/GsTYPO3/config-handling-extensions",
+	"support": {
+		"issues": "https://github.com/GsTYPO3/config-handling-extensions/issues",
+		"source": "https://github.com/GsTYPO3/config-handling-extensions"
+	},
+	"require": {
+		"php": "^7.4 || ^8.0",
+		"helhum/config-loader": "^0.12.5",
+		"helhum/typo3-config-handling": "^1.0",
+		"typo3/cms-composer-installers": "^2.0 || ^3.0 || ^4.0",
+		"typo3/cms-core": "^10.4 || ^11.4"
+	},
+	"require-dev": {
+		"bamarni/composer-bin-plugin": "*",
+		"composer/composer": "^2.0",
+		"ergebnis/composer-normalize": "*",
+		"gilbertsoft/typo3-config-handling-test": "@dev"
+	},
+	"conflict": {
+		"helhum/typo3-console-plugin": "<2.0.7",
+		"nikic/php-parser": "<4.6.0"
+	},
+	"repositories": {
+		"test-extensions": {
+			"type": "path",
+			"url": "tests/extensions/*"
+		}
+	},
+	"prefer-stable": true,
+	"autoload": {
+		"psr-4": {
+			"Gilbertsoft\\TYPO3\\ConfigHandling\\": "src"
+		},
+		"files": [
+			"res/php/autoload-include.php"
+		]
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Gilbertsoft\\TYPO3\\ConfigHandling\\Tests\\Hook\\": "tests/hook",
+			"Gilbertsoft\\TYPO3\\ConfigHandling\\Tests\\Unit\\": "tests/unit"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"bamarni/composer-bin-plugin": true,
+			"typo3/cms-composer-installers": true,
+			"typo3/class-alias-loader": true,
+			"ergebnis/composer-normalize": true,
+			"helhum/typo3-console-plugin": true
+		},
+		"sort-packages": true
+	},
+	"extra": {
+		"bamarni-bin": {
+			"target-directory": "tools"
+		},
+		"branch-alias": {
+			"dev-main": "0.1.x-dev"
+		}
+	},
+	"scripts": {
+		"post-install-cmd": [
+			"@tools:setup:install"
+		],
+		"post-update-cmd": [
+			"@tools:setup:update"
+		],
+		"bin": "echo 'bin not installed.'",
+		"ci": [
+			"@ci:static",
+			"@ci:dynamic"
+		],
+		"ci:composer": [
+			"@ci:composer:normalize",
+			"@ci:composer:validate",
+			"@ci:composer:require-checker"
+		],
+		"ci:composer:normalize": "@tools:composer:normalize",
+		"ci:composer:require-checker": "@tools:composer:require-checker",
+		"ci:composer:validate": "@tools:composer:validate",
+		"ci:dynamic": [
+			"@ci:tests"
+		],
+		"ci:php": [
+			"@ci:php:lint",
+			"@ci:php:rector",
+			"@ci:php:cs-fixer",
+			"@ci:php:copypaste",
+			"@ci:php:sniff",
+			"@ci:php:stan"
+		],
+		"ci:php:copypaste": "@tools:php:copypaste",
+		"ci:php:cs-fixer": "@tools:php:cs-fixer --using-cache no",
+		"ci:php:lint": "@tools:php:lint --no-progress",
+		"ci:php:rector": "@tools:php:rector --no-progress-bar",
+		"ci:php:sniff": "@tools:php:sniff",
+		"ci:php:sniff:strict": "@tools:php:sniff:strict",
+		"ci:php:stan": "@tools:php:stan --no-progress",
+		"ci:static": [
+			"@ci:composer",
+			"@ci:yaml:lint",
+			"@ci:php"
+		],
+		"ci:tests": [
+			"@ci:tests:unit",
+			"@ci:tests:functional",
+			"@ci:tests:smoke"
+		],
+		"ci:tests:functional": "@tools:tests:functional",
+		"ci:tests:smoke": "@tools:tests:smoke",
+		"ci:tests:unit": "@tools:tests:unit",
+		"ci:yaml:lint": "@tools:yaml:lint",
+		"clean": [
+			"@tools:setup:clean",
+			"rm -fr src/Extensions/ExtensionsTrait.php var vendor .php-cs-fixer.cache .phplint-cache || true"
+		],
+		"clean:all": [
+			"@clean",
+			"rm -fr config public || true",
+			"mkdir -p config public/typo3conf",
+			"cp res/config/* config/",
+			"echo 'KEEP_FILE' > public/typo3conf/ENABLE_INSTALL_TOOL",
+			"echo 'Run `ddev delete -Oy` to remove the database now.'"
+		],
+		"fix": [
+			"@fix:composer",
+			"@fix:php"
+		],
+		"fix:composer": [
+			"@fix:composer:normalize"
+		],
+		"fix:composer:normalize": [
+			"@composer normalize --ansi -n"
+		],
+		"fix:php": [
+			"@fix:php:rector",
+			"@fix:php:cs",
+			"@fix:php:sniff"
+		],
+		"fix:php:cs": "@php php-cs-fixer fix",
+		"fix:php:rector": "@php rector process --no-diffs",
+		"fix:php:sniff": "@php phpcbf --standard=PSR12 src tests",
+		"tools": [
+			"@tools:static",
+			"@tools:dynamic"
+		],
+		"tools:composer": [
+			"@tools:composer:normalize",
+			"@tools:composer:validate",
+			"@tools:composer:require-checker"
+		],
+		"tools:composer:normalize": "@composer normalize --ansi -n --dry-run",
+		"tools:composer:require-checker": [
+			"@composer require --ansi -n composer/composer:^2.0 --no-plugins",
+			"@php composer-require-checker",
+			"@clean",
+			"@composer require --ansi -n --dev composer/composer:^2.0"
+		],
+		"tools:composer:validate": "@composer validate --ansi -n --strict",
+		"tools:dynamic": [
+			"@tools:tests"
+		],
+		"tools:php": [
+			"@tools:php:lint",
+			"@tools:php:rector",
+			"@tools:php:cs-fixer",
+			"@tools:php:copypaste",
+			"@tools:php:sniff",
+			"@tools:php:stan"
+		],
+		"tools:php:copypaste": "@php phpcpd src tests",
+		"tools:php:cs-fixer": "@php php-cs-fixer fix -v --dry-run --diff",
+		"tools:php:lint": "@php phplint --no-progress",
+		"tools:php:rector": "@php rector process --dry-run",
+		"tools:php:sniff": "@php phpcs --standard=PSR12 src tests",
+		"tools:php:sniff:strict": "@php phpcs src tests",
+		"tools:php:stan": "@php phpstan analyse --no-progress",
+		"tools:setup:clean": "rm -fr tools/**/composer.lock tools/**/vendor || true",
+		"tools:setup:install": "@composer bin all install --ansi",
+		"tools:setup:update": "@composer bin all update --ansi",
+		"tools:static": [
+			"@tools:composer",
+			"@tools:yaml:lint",
+			"@tools:php"
+		],
+		"tools:tests": [
+			"@tools:tests:unit",
+			"@tools:tests:functional",
+			"@tools:tests:smoke"
+		],
+		"tools:tests:functional": "echo 'Functional test placeholder'",
+		"tools:tests:smoke": "echo 'Smoke test placeholder'",
+		"tools:tests:unit": "@php phpunit -c tests/unit/phpunit.xml",
+		"tools:yaml:lint": "@php yaml-lint .ddev .github"
+	},
+	"scripts-descriptions": {
+		"ci": "Runs development tools in CI mode.",
+		"clean": "Removes some development related files.",
+		"clean:all": "Removes all development related files.",
+		"tools": "Runs development tools.",
+		"tools:setup:clean": "Clean development tools.",
+		"tools:setup:install": "Install development tools.",
+		"tools:setup:update": "Update development tools."
+	}
+}

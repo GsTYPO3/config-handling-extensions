@@ -1,0 +1,6 @@
+TEST:
+  Key1: 'k1.test1'
+TEST1:
+  Key1: 'config.yaml'
+  Key2: 'config.yaml'
+  Key3: 'config.yaml'
