@@ -54,8 +54,8 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "[RELEASE] ${{ steps.version.outputs.name }}"
-          git push $PUSH_OPTIONS || echo "Nothing to commit, versions are already up to date."
+          git commit -m "[RELEASE] ${{ steps.version.outputs.name }}" || echo "Nothing to commit, versions are already up to date."
+          git push $PUSH_OPTIONS
 
       - name: Create release
         id: release
