@@ -39,7 +39,6 @@ jobs:
         uses: release-drafter/release-drafter@v5
         with:
           commitish: ${{ github.ref }}
-          disable-releaser: true
           disable-autolabeler: true
 
       - name: Print calculated version
@@ -66,5 +65,4 @@ jobs:
         with:
           publish: ${{ github.event.inputs.mode == 'publish' }}
           commitish: ${{ github.ref }}
-          disable-releaser: ${{ github.event.inputs.mode != 'publish' }}
           disable-autolabeler: true
