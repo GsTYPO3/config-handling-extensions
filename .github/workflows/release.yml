@@ -23,6 +23,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          coverage: none
+          extensions: intl, zip
+          ini-values: memory_limit=-1
+          php-version: latest
+          tools: composer
+
       - name: Calculate release version
         id: version
         env:
@@ -30,6 +39,7 @@ jobs:
         uses: release-drafter/release-drafter@v5
         with:
           commitish: ${{ github.ref }}
+          disable-releaser: true
           disable-autolabeler: true
 
       - name: Print calculated version
@@ -37,6 +47,16 @@ jobs:
           VERSION_OUTPUTS: ${{ toJSON(steps.version.outputs) }}
         run: |
           echo "$VERSION_OUTPUTS"
+
+      - name: Add release commit
+        run: |
+          test "${{ github.event.inputs.mode }}" == "publish" && PUSH_OPTIONS="" || PUSH_OPTIONS=--dry-run
+          composer set-version ${{ steps.version.outputs.tag_name }}
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "[RELEASE] ${{ steps.version.outputs.name }}"
+          git push $PUSH_OPTIONS
 
       - name: Create release
         id: release
@@ -46,4 +66,5 @@ jobs:
         with:
           publish: ${{ github.event.inputs.mode == 'publish' }}
           commitish: ${{ github.ref }}
+          disable-releaser: ${{ github.event.inputs.mode != 'publish' }}
           disable-autolabeler: true
