@@ -32,7 +32,7 @@ jobs:
           php-version: latest
           tools: composer
 
-      - name: Calculate release version
+      - name: Calculate release version and create release draft
         id: version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,13 +56,3 @@ jobs:
           git add .
           git commit -m "[RELEASE] ${{ steps.version.outputs.name }}" || echo "Nothing to commit, versions are already up to date."
           git push $PUSH_OPTIONS
-
-      - name: Create release
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: release-drafter/release-drafter@v5
-        with:
-          publish: ${{ github.event.inputs.mode == 'publish' }}
-          commitish: ${{ github.ref }}
-          disable-autolabeler: true
