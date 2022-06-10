@@ -27,60 +27,158 @@ namespace Gilbertsoft\TYPO3\ConfigHandling\Composer;
 
 use Composer\Script\Event;
 use Composer\Semver\VersionParser;
+use Composer\Util\Filesystem;
+use Composer\Util\Platform;
+use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 use UnexpectedValueException;
 
 /**
- * @internal
+ * @noRector \Rector\Privatization\Rector\Class_\FinalizeClassesWithoutChildrenRector
  */
-final class Scripts
+class Scripts
 {
+    private static ?Filesystem $filesystem = null;
+
+    protected static function getFilesystem(): Filesystem
+    {
+        if (self::$filesystem === null) {
+            self::$filesystem = new Filesystem();
+        }
+
+        return self::$filesystem;
+    }
+
+    /**
+     * @param bool $forceConfig Forces to read the path from the config instead of cwd.
+     */
+    protected static function getRootPath(Event $event, bool $forceConfig = false): string
+    {
+        if (!$forceConfig) {
+            // @todo replace with Platform::getCwd(true) once Composer lower 2.3 is not supported anymore
+            // return Platform::getCwd(true);
+            if (($cwd = getcwd()) === false) {
+                return '';
+            }
+
+            return $cwd;
+        }
+
+        return dirname($event->getComposer()->getConfig()->getConfigSource()->getName());
+    }
+
     /**
      * @throws UnexpectedValueException
      */
-    private static function extractVersions(string $rawVersion, string &$version, string &$branchVersion): void
+    protected static function getAbsoluteFilename(Event $event, string $filename): string
+    {
+        if (self::getFilesystem()->isAbsolutePath($filename)) {
+            throw new UnexpectedValueException(
+                sprintf(
+                    'The parameter filename should be relative to the root composer.json, "%s" was given.',
+                    $filename
+                ),
+                1_654_777_710
+            );
+        }
+
+        return self::getRootPath($event) . '/' . $filename;
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    protected static function fileGetContents(string $filename): string
+    {
+        try {
+            if (($content = file_get_contents($filename)) === false) {
+                // @codeCoverageIgnoreStart
+                throw new RuntimeException();
+                // @codeCoverageIgnoreEnd
+            }
+
+            return $content;
+        } catch (Throwable $throwable) {
+            throw new RuntimeException(
+                sprintf('Failed to read file "%s".', $filename),
+                1_654_777_708,
+                $throwable
+            );
+        }
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    protected static function filePutContents(string $filename, string $content): void
+    {
+        try {
+            if (file_put_contents($filename, $content) === false) {
+                // @codeCoverageIgnoreStart
+                throw new RuntimeException();
+                // @codeCoverageIgnoreEnd
+            }
+        } catch (Throwable $throwable) {
+            throw new RuntimeException(
+                sprintf('Failed to write file "%s".', $filename),
+                1_654_777_709,
+                $throwable
+            );
+        }
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     * @throws UnexpectedValueException
+     */
+    protected static function extractVersions(string $rawVersion, string &$version, string &$branchVersion): void
     {
         if ($rawVersion === '') {
-            throw new UnexpectedValueException(
-                'A valid version number must be provided as argument e.g. `composer set-version 1.2.3`.',
+            throw new InvalidArgumentException(
+                'The parameter rawVersion must be not be empty.',
                 1_654_777_706
             );
         }
 
         $normalizedVersion = (new VersionParser())->normalize($rawVersion);
 
-        if (preg_match('#^(\d+)\.(\d+)\.(\d+)#', $normalizedVersion, $matches) === false) {
-            // @codeCoverageIgnoreStart
+        if (preg_match('#^(\d+)\.(\d+)\.(\d+)#', $normalizedVersion, $matches) === false || count($matches) !== 4) {
             throw new UnexpectedValueException(sprintf('"%s" is no valid version number.', $rawVersion), 1_654_777_707);
-            // @codeCoverageIgnoreEnd
         }
 
         $version = sprintf('%d.%d.%d', $matches[1], $matches[2], $matches[3]);
-        $branchVersion = sprintf('%d.%d.x-dev', $matches[1], $matches[2]);
+        $branchVersion = sprintf('%d.%d', $matches[1], $matches[2]);
     }
 
     /**
+     * @param string $filename File name relative to the root composer.json.
      * @throws RuntimeException
+     * @throws UnexpectedValueException
      */
-    private static function replaceVersion(string $filename, string $pattern, string $version): void
+    protected static function replaceVersion(Event $event, string $filename, string $pattern, string $version): void
     {
-        if (($currentContent = file_get_contents($filename)) === false) {
-            // @codeCoverageIgnoreStart
-            throw new RuntimeException(sprintf('"%s" could not be read.', $filename), 1_654_777_708);
-            // @codeCoverageIgnoreEnd
-        }
+        $currentContent = self::fileGetContents($filename);
 
-        $content = preg_replace($pattern, '${1}' . $version . '${2}', $currentContent);
+        try {
+            $content = preg_replace($pattern, '${1}' . $version . '${2}', $currentContent);
+
+            if ($content === null) {
+                throw new UnexpectedValueException();
+            }
+        } catch (Throwable $throwable) {
+            throw new UnexpectedValueException(
+                sprintf('Failed to replace version in "%s" with pattern "%s".', $filename, $pattern),
+                1_654_777_711,
+                $throwable
+            );
+        }
 
         if ($currentContent === $content) {
             return;
         }
 
-        if (file_put_contents($filename, $content) === false) {
-            // @codeCoverageIgnoreStart
-            throw new RuntimeException(sprintf('"%s" could not be written.', $filename), 1_654_777_709);
-            // @codeCoverageIgnoreEnd
-        }
+        self::filePutContents($filename, $content);
     }
 
     /**
@@ -92,42 +190,50 @@ final class Scripts
         $version = '';
         $branchVersion = '';
 
-        self::extractVersions($event->getArguments()[0] ?? '', $version, $branchVersion);
+        try {
+            self::extractVersions($event->getArguments()[0] ?? '', $version, $branchVersion);
+        } catch (InvalidArgumentException $invalidArgumentException) {
+            throw new UnexpectedValueException(
+                'A valid version number must be provided as argument e.g. `composer set-version 1.2.3`.',
+                1_654_777_706,
+                $invalidArgumentException
+            );
+        }
 
-        self::replaceVersion(
-            __DIR__ . '/../../README.md',
-            '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
-            $version
-        );
+        foreach (
+            [
+                'README.md' =>
+                    '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
+                'tests/extensions/test/composer.json' =>
+                    '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
+                'tests/unit/Fixtures/composer.json' =>
+                    '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
+                '.ddev/config.yaml' =>
+                    '/(- COMPOSER_ROOT_VERSION=)\d+.\d+.\d+()/',
+                '.github/workflows/continuous-integration.yml' =>
+                    '/(COMPOSER_ROOT_VERSION: )\d+.\d+.\d+()/',
+            ] as $filename => $pattern
+        ) {
+            self::replaceVersion(
+                $event,
+                $filename,
+                $pattern,
+                $version
+            );
+        }
 
-        self::replaceVersion(
-            __DIR__ . '/../../tests/extensions/test/composer.json',
-            '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
-            $version
-        );
-
-        self::replaceVersion(
-            __DIR__ . '/../../tests/unit/Fixtures/composer.json',
-            '/("gilbertsoft\/typo3-config-handling-extensions": "\^)\d+.\d+.\d+(")/',
-            $version
-        );
-
-        self::replaceVersion(
-            __DIR__ . '/../../.ddev/config.yaml',
-            '/(- COMPOSER_ROOT_VERSION=)\d+.\d+.\d+()/',
-            $version
-        );
-
-        self::replaceVersion(
-            __DIR__ . '/../../.github/workflows/continuous-integration.yml',
-            '/(COMPOSER_ROOT_VERSION: )\d+.\d+.\d+()/',
-            $version
-        );
-
-        self::replaceVersion(
-            __DIR__ . '/../../composer.json',
-            '/("dev-main": ")\d+.\d+.x-dev(")/',
-            $branchVersion
-        );
+        foreach (
+            [
+                'composer.json' =>
+                    '/("dev-main": ")\d+.\d+(.x-dev")/',
+            ] as $filename => $pattern
+        ) {
+            self::replaceVersion(
+                $event,
+                $filename,
+                $pattern,
+                $branchVersion
+            );
+        }
     }
 }

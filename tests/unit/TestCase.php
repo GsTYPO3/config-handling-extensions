@@ -25,6 +25,7 @@ declare(strict_types=1);
 
 namespace Gilbertsoft\TYPO3\ConfigHandling\Tests\Unit;
 
+use Composer\Util\Filesystem as ComposerFilesystem;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Prophecy\PhpUnit\ProphecyTrait;
 use RuntimeException;
@@ -44,6 +45,8 @@ abstract class TestCase extends BaseTestCase
 
     private static Filesystem $filesystem;
 
+    private static ComposerFilesystem $composerFilesystem;
+
     public static function setUpBeforeClass(): void
     {
         self::$rootPath = \dirname(__DIR__, 2);
@@ -54,6 +57,8 @@ abstract class TestCase extends BaseTestCase
         self::$filesystem = new Filesystem();
         //unlink(self::$testPath);
         self::$filesystem->mkdir(self::$testPath);
+
+        self::$composerFilesystem = new ComposerFilesystem();
     }
 
     protected function setUp(): void
@@ -127,6 +132,11 @@ abstract class TestCase extends BaseTestCase
     protected static function getFilesystem(): Filesystem
     {
         return self::$filesystem;
+    }
+
+    protected static function getComposerFilesystem(): ComposerFilesystem
+    {
+        return self::$composerFilesystem;
     }
 
     /**
