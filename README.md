@@ -1,5 +1,15 @@
 # TYPO3 Config Handling Extensions
 
+[![Packagist Version](https://img.shields.io/packagist/v/gilbertsoft/typo3-config-handling-extensions)](https://packagist.org/packages/gilbertsoft/typo3-config-handling-extensions)
+[![Packagist PHP Version Support](https://img.shields.io/packagist/php-v/gilbertsoft/typo3-config-handling-extensions)](https://packagist.org/packages/gilbertsoft/typo3-config-handling-extensions)
+[![GitHub issues](https://img.shields.io/github/issues/GsTYPO3/config-handling-extensions)](https://github.com/GsTYPO3/config-handling-extensions/issues)
+[![GitHub forks](https://img.shields.io/github/forks/GsTYPO3/config-handling-extensions)](https://github.com/GsTYPO3/config-handling-extensions/network)
+[![GitHub stars](https://img.shields.io/github/stars/GsTYPO3/config-handling-extensions)](https://github.com/GsTYPO3/config-handling-extensions/stargazers)
+[![GitHub license](https://img.shields.io/github/license/GsTYPO3/config-handling-extensions)](https://github.com/GsTYPO3/config-handling-extensions/blob/main/LICENSE)
+[![GitHub build](https://img.shields.io/github/workflow/status/GsTYPO3/config-handling-extensions/Continuous%20Integration%20(CI))](https://github.com/GsTYPO3/config-handling-extensions/actions/workflows/continuous-integration.yml)
+[![Coveralls](https://img.shields.io/coveralls/github/GsTYPO3/config-handling-extensions)](https://coveralls.io/github/GsTYPO3/config-handling-extensions)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](https://github.com/GsTYPO3/config-handling-extensions/blob/main/CODE_OF_CONDUCT.md)
+
 This package extends `helhum/typo3-config-handling` with an extension system
 that allows to create flexible configuration templates that can be bundled into
 Composer packages and thus easily usable in multiple projects.
