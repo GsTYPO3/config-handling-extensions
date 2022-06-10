@@ -32,7 +32,7 @@ use Helhum\ConfigLoader\ConfigurationReaderFactory;
 use Helhum\ConfigLoader\InvalidConfigurationFileException;
 use Helhum\ConfigLoader\Reader\ConfigReaderInterface;
 use Helhum\ConfigLoader\Reader\GlobFileReader;
-use LogicException;
+use InvalidArgumentException;
 
 final class Extensions implements ConfigReaderInterface
 {
@@ -86,7 +86,7 @@ final class Extensions implements ConfigReaderInterface
         }
 
         if (!class_exists($class)) {
-            throw new LogicException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'Class "%s" not found in extension "%s".',
                 $class,
                 $extension->getName()
@@ -95,7 +95,7 @@ final class Extensions implements ConfigReaderInterface
 
         $instance = new $class();
         if (!$instance instanceof ConfigProviderInterface) {
-            throw new LogicException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'Class "%s" does not implement ConfigProviderInterface in extension "%s".',
                 $class,
                 $extension->getName()

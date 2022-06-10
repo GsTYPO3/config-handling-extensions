@@ -28,6 +28,7 @@ namespace Gilbertsoft\TYPO3\ConfigHandling\Composer;
 use Composer\Script\Event;
 use Composer\Semver\VersionParser;
 use RuntimeException;
+use UnexpectedValueException;
 
 /**
  * @internal
@@ -35,12 +36,12 @@ use RuntimeException;
 final class Scripts
 {
     /**
-     * @throws RuntimeException
+     * @throws UnexpectedValueException
      */
     private static function extractVersions(string $rawVersion, string &$version, string &$branchVersion): void
     {
         if ($rawVersion === '') {
-            throw new RuntimeException(
+            throw new UnexpectedValueException(
                 'A valid version number must be provided as argument e.g. `composer set-version 1.2.3`.',
                 1_654_777_706
             );
@@ -50,7 +51,7 @@ final class Scripts
 
         if (preg_match('#^(\d+)\.(\d+)\.(\d+)#', $normalizedVersion, $matches) === false) {
             // @codeCoverageIgnoreStart
-            throw new RuntimeException(sprintf('"%s" is no valid version number.', $rawVersion), 1_654_777_707);
+            throw new UnexpectedValueException(sprintf('"%s" is no valid version number.', $rawVersion), 1_654_777_707);
             // @codeCoverageIgnoreEnd
         }
 
@@ -58,6 +59,9 @@ final class Scripts
         $branchVersion = sprintf('%d.%d.x-dev', $matches[1], $matches[2]);
     }
 
+    /**
+     * @throws RuntimeException
+     */
     private static function replaceVersion(string $filename, string $pattern, string $version): void
     {
         if (($currentContent = file_get_contents($filename)) === false) {
@@ -81,6 +85,7 @@ final class Scripts
 
     /**
      * @throws RuntimeException
+     * @throws UnexpectedValueException
      */
     public static function setVersion(Event $event): void
     {

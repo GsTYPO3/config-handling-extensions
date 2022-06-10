@@ -25,6 +25,8 @@ declare(strict_types=1);
 
 namespace Gilbertsoft\TYPO3\ConfigHandling\Extensions;
 
+use RuntimeException;
+
 final class ExtensionManager
 {
     use ExtensionsTrait;
@@ -34,7 +36,7 @@ final class ExtensionManager
         try {
             return $this->getExtensions()[$name];
         } catch (\Throwable $throwable) {
-            throw new \RuntimeException(sprintf('Extension "%s" not found.', $name), 1_654_429_424, $throwable);
+            throw new RuntimeException(sprintf('Extension "%s" not found.', $name), 1_654_429_424, $throwable);
         }
     }
 }
